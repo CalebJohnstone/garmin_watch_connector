@@ -1,4 +1,10 @@
-"""Script to visualize daily step count data from Garmin Connect as an area chart."""
+"""
+Script to visualize daily step count data from Garmin Connect as an area chart.
+
+This script fetches the last 30 days of step count data from Garmin Connect
+and creates a beautiful area chart visualization with a dark green line and
+light green fill. The chart is exported as a high-quality PDF file.
+"""
 import logging
 import sys
 from datetime import datetime, timedelta
