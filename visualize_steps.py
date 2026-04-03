@@ -203,10 +203,12 @@ def create_bar_chart(step_data, output_file='step_count_chart.pdf'):
         # Create the bar chart with individual bars for each day
         bars = ax.bar(dates, steps, color='darkblue', alpha=0.8, width=0.8)
 
+        max_steps = max(steps)
+
         # Add value labels on top of each bar
         for bar, step_count in zip(bars, steps):
             height = bar.get_height()
-            ax.text(bar.get_x() + bar.get_width()/2., height + max(steps)*0.01,
+            ax.text(bar.get_x() + bar.get_width()/2., height + max_steps*0.01,
                    f'{step_count:,}', ha='center', va='bottom', fontsize=8, rotation=45)
 
         # Format the chart
