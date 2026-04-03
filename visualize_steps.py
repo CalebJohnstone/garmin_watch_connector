@@ -10,6 +10,7 @@ import sys
 from datetime import datetime, timedelta
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
+from DatabaseManager import DatabaseManager
 from GarminConnectSync import GarminConnectSync
 from config import GARMIN_EMAIL, GARMIN_PASSWORD
 
@@ -22,6 +23,108 @@ logging.basicConfig(
         logging.StreamHandler(sys.stdout)
     ]
 )
+
+def init_database():
+    """Initialize the database and create the steps table if it doesn't exist"""
+    db = DatabaseManager()
+
+    if not db.connect():
+        return False
+
+    try:
+        # Create steps table if it doesn't exist
+        db.cursor.execute("""
+            CREATE TABLE IF NOT EXISTS daily_steps (
+                id SERIAL PRIMARY KEY,
+                date DATE UNIQUE NOT NULL,
+                step_count INTEGER NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+
+        db.connection.commit()
+        logging.info("Database initialized successfully")
+        return True
+
+    except Exception as exc:
+        logging.error("Error initializing database: %s", exc)
+        db.connection.rollback()
+        return False
+    finally:
+        db.close()
+
+def record_exists(date_str):
+    """Check if a record already exists for the given date"""
+    db = DatabaseManager()
+
+    if not db.connect():
+        return False
+
+    try:
+        db.cursor.execute("SELECT COUNT(*) FROM daily_steps WHERE date = %s", (date_str,))
+        count = db.cursor.fetchone()['count']
+        return count > 0
+
+    except Exception as exc:
+        logging.error("Error checking if record exists: %s", exc)
+        return False
+    finally:
+        db.close()
+
+def save_step_data_to_db(step_data):
+    """Save step data to PostgreSQL database, avoiding duplicates"""
+    if not step_data:
+        return
+
+    db = DatabaseManager()
+
+    if not db.connect():
+        return
+
+    try:
+        new_records = 0
+        skipped_records = 0
+
+        for day in step_data:
+            date_str = day.get('calendarDate', '')
+            total_steps = day.get('totalSteps', 0)
+
+            if not date_str or total_steps is None:
+                continue
+
+            # Convert to int and handle invalid values
+            try:
+                steps_int = int(total_steps)
+            except (ValueError, TypeError):
+                logging.warning("Invalid step count for %s: %s", date_str, total_steps)
+                continue
+
+            # Check if record already exists
+            if record_exists(date_str):
+                skipped_records += 1
+                logging.debug("Record already exists for %s, skipping", date_str)
+                continue
+
+            # Insert new record
+            db.cursor.execute("""
+                INSERT INTO daily_steps (date, step_count)
+                VALUES (%s, %s)
+                ON CONFLICT (date) DO NOTHING
+            """, (date_str, steps_int))
+
+            new_records += 1
+            logging.info("Saved step data for %s: %d steps", date_str, steps_int)
+
+        db.connection.commit()
+        logging.info("Database save complete. New records: %d, Skipped: %d",
+                    new_records, skipped_records)
+
+    except Exception as exc:
+        logging.error("Error saving step data to database: %s", exc)
+        db.connection.rollback()
+    finally:
+        db.close()
 
 def get_step_data_for_last_month():
     """Fetch step count data for the last 30 days from Garmin Connect"""
@@ -54,6 +157,10 @@ def get_step_data_for_last_month():
         step_data = garmin.client.get_daily_steps(start_date_str, end_date_str)
 
         logging.info("Retrieved step data for %d days", len(step_data))
+
+        # Save to database
+        save_step_data_to_db(step_data)
+
         return step_data
 
     except Exception as exc:
@@ -153,6 +260,11 @@ def create_bar_chart(step_data, output_file='step_count_chart.pdf'):
 def main():
     """Main function to fetch step data and create visualization"""
     logging.info("Starting step count visualization process...")
+
+    # Initialize database
+    if not init_database():
+        logging.error("Failed to initialize database")
+        return
 
     # Fetch step data
     step_data = get_step_data_for_last_month()
