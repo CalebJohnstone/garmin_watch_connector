@@ -285,7 +285,7 @@ def create_bar_chart(step_data, output_file='step_count_chart.pdf'):
 
         # Format x-axis to show dates nicely
         ax.xaxis.set_major_formatter(mdates.DateFormatter('%b %d'))
-        ax.xaxis.set_major_locator(mdates.DayLocator(interval=2))
+        ax.xaxis.set_major_locator(mdates.DayLocator(interval=3))
         plt.xticks(rotation=45, ha='right')
 
         # Add grid for better readability (horizontal only)
