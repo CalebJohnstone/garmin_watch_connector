@@ -100,21 +100,19 @@ def save_step_data_to_db(step_data):
                 logging.warning("Invalid step count for %s: %s", date_str, total_steps)
                 continue
 
-            # Check if record already exists
-            if record_exists(date_str):
-                skipped_records += 1
-                logging.debug("Record already exists for %s, skipping", date_str)
-                continue
-
-            # Insert new record
+            # Insert and let the database handle duplicates
             db.cursor.execute("""
                 INSERT INTO daily_steps (date, step_count)
                 VALUES (%s, %s)
                 ON CONFLICT (date) DO NOTHING
             """, (date_str, steps_int))
 
-            new_records += 1
-            logging.info("Saved step data for %s: %d steps", date_str, steps_int)
+            if db.cursor.rowcount > 0:
+                new_records += 1
+                logging.info("Saved step data for %s: %d steps", date_str, steps_int)
+            else:
+                skipped_records += 1
+                logging.debug("Record already exists for %s, skipping", date_str)
 
         db.connection.commit()
         logging.info("Database save complete. New records: %d, Skipped: %d",
