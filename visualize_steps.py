@@ -1,5 +1,5 @@
 """
-Script to visualize daily step count data from Garmin Connect as an bar chart.
+Script to visualize daily step count data from Garmin Connect as a bar chart.
 
 This script fetches the last 30 days of step count data from Garmin Connect
 and creates a bar chart visualization with a dark green line and
