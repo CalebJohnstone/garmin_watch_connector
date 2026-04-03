@@ -15,7 +15,3 @@ DB_CONFIG = {
 # Garmin Connect configuration
 GARMIN_EMAIL = os.getenv('GARMIN_EMAIL')
 GARMIN_PASSWORD = os.getenv('GARMIN_PASSWORD')
-
-# Garmin device configuration
-GARMIN_DEVICE_NAME = "Forerunner 255 Music"
-GARMIN_MAC_ADDRESS = os.getenv('GARMIN_MAC_ADDRESS')
