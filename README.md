@@ -4,7 +4,6 @@ Sync my Garmin Forerunner 255 Music data to perform data analytics and visualiza
 ## Features
 
 ### Step Count Visualization
-Generate a beautiful area chart showing your daily step count for the last 30 days.
 
 **Usage:**
 ```bash
@@ -13,7 +12,7 @@ python visualize_steps.py
 
 This will:
 - Fetch your step count data from Garmin Connect for the last 30 days
-- Create an area chart with a dark green line and light green fill
+- Create a bar chart with a bar for each day
 - Export the visualization as a PDF file (`step_count_chart.pdf`)
 - Display statistics including average, maximum, and minimum steps
 
