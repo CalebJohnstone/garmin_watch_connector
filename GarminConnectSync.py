@@ -174,6 +174,7 @@ class GarminConnectSync:
                     logging.info(f"Getting detailed data for new activity {activity_id}")
 
                     detailed_activity = self.client.get_activity(activity_id)
+                    logging.info(f"xx {detailed_activity.values()}")
                     formatted_data = self.format_activity_data(detailed_activity, current_activity)
 
                     if not formatted_data:
