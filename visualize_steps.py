@@ -1,10 +1,3 @@
-"""
-Script to visualize daily step count data from Garmin Connect as an bar chart.
-
-This script fetches the last 30 days of step count data from Garmin Connect
-and creates a bar chart visualization with a dark green line and
-light green fill. The chart is exported as a high-quality PDF file.
-"""
 import logging
 import sys
 from datetime import datetime, timedelta
