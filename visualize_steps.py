@@ -1,3 +1,4 @@
+import argparse
 import logging
 import sys
 from datetime import datetime, timedelta
@@ -133,27 +134,24 @@ def save_step_data_to_db(step_data):
     finally:
         db.close()
 
-def get_step_data_for_last_month():
+def get_step_data_for_last_days(days_back=30):
     """Fetch step count data for the last 30 days from Garmin Connect"""
-    logging.info("Starting to fetch step count data for the last month...")
+    logging.info("Starting to fetch step count data for the last %d days...", days_back)
 
     # Check credentials
     if not GARMIN_EMAIL or not GARMIN_PASSWORD:
         logging.error("Garmin Connect credentials not configured in .env file")
         return None
 
-    # Initialize Garmin Connect client
     garmin = GarminConnectSync(GARMIN_EMAIL, GARMIN_PASSWORD)
 
     try:
-        # Login to Garmin Connect
         if not garmin.login():
             logging.error("Failed to login to Garmin Connect")
             return None
 
-        # Calculate date range (last 30 days)
         end_date = datetime.now()
-        start_date = end_date - timedelta(days=30)
+        start_date = end_date - timedelta(days=days_back)
 
         start_date_str = start_date.strftime('%Y-%m-%d')
         end_date_str = end_date.strftime('%Y-%m-%d')
@@ -225,27 +223,23 @@ def save_statistics_to_db(dates, steps, start_date, end_date):
     finally:
         db.close()
 
-def create_bar_chart(step_data, output_file='step_count_chart.pdf'):
+def create_bar_graph(step_data, output_file='step_count_chart.pdf'):
     """Create a bar chart of step counts and export to PDF"""
     if not step_data:
         logging.error("No step data to visualize")
         return False
 
     try:
-        # Extract dates and step counts
         dates = []
         steps = []
 
         for day in step_data:
-            # Parse the calendar date
             date_str = day.get('calendarDate', '')
             if date_str:
                 date_obj = datetime.strptime(date_str, '%Y-%m-%d')
 
-                # Get total steps for the day and ensure it's a valid number
                 total_steps = day.get('totalSteps', 0)
 
-                # Convert to int and handle None or invalid values
                 if total_steps is not None:
                     try:
                         steps_int = int(total_steps)
@@ -264,19 +258,29 @@ def create_bar_chart(step_data, output_file='step_count_chart.pdf'):
 
         logging.info("Processing %d days with valid step data", len(dates))
 
-        # Create the plot
         _, ax = plt.subplots(figsize=(14, 8))
 
-        # Create the bar chart with individual bars for each day
         bars = ax.bar(dates, steps, color='darkblue', alpha=0.8, width=0.8)
 
         max_steps = max(steps)
 
         # Add value labels on top of each bar
-        for bar, step_count in zip(bars, steps):
-            height = bar.get_height()
-            ax.text(bar.get_x() + bar.get_width()/2., height + max_steps*0.01,
-                   f'{step_count:,}', ha='center', va='bottom', fontsize=8, rotation=45)
+        if max_steps <= 30:
+            for bar, step_count in zip(bars, steps):
+                height = bar.get_height()
+                ax.text(
+                    bar.get_x() + bar.get_width()/2.,
+                    height + max_steps*0.01,
+                   f'{step_count:,}',
+                   ha='center',
+                   va='bottom',
+                   fontsize=8,
+                   rotation=45)
+        else:
+            # show the 3 day moving average also
+            moving_avg = [sum(steps[i:i+3])/3 for i in range(len(steps)-2)]
+            ax.plot(dates[1:-1], moving_avg, color='orange', marker='o', label='3-Day Moving Average')
+            ax.legend()
 
         # Format the chart
         ax.set_xlabel('Date', fontsize=12, fontweight='bold')
@@ -321,20 +325,22 @@ def main():
     """Main function to fetch step data and create visualization"""
     logging.info("Starting step count visualization process...")
 
-    # Initialize database
     if not init_database():
         logging.error("Failed to initialize database")
         return
 
-    # Fetch step data
-    step_data = get_step_data_for_last_month()
+    #get days back from command line argument or default to 30
+    args = argparse.ArgumentParser(description='Visualize step count data from Garmin Connect')
+    args.add_argument('--days-back', type=int, default=30, help='Number of days back to fetch step data for (default: 30)')
+    parsed_args = args.parse_args()
+
+    step_data = get_step_data_for_last_days(parsed_args.days_back)
 
     if not step_data:
         logging.error("Failed to fetch step data")
         return
 
-    # Create and save the chart
-    success = create_bar_chart(step_data)
+    success = create_bar_graph(step_data)
 
     if success:
         logging.info("Visualization completed successfully")
