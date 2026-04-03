@@ -36,6 +36,22 @@ def init_database():
             )
         """)
 
+        # Create statistics table if it doesn't exist
+        db.cursor.execute("""
+            CREATE TABLE IF NOT EXISTS step_statistics (
+                id SERIAL PRIMARY KEY,
+                analysis_date DATE NOT NULL,
+                start_date DATE NOT NULL,
+                end_date DATE NOT NULL,
+                days_analyzed INTEGER NOT NULL,
+                average_steps DECIMAL(10, 2) NOT NULL,
+                max_steps INTEGER NOT NULL,
+                min_steps INTEGER NOT NULL,
+                standard_deviation DECIMAL(10, 2) NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+
         db.connection.commit()
         logging.info("Database initialized successfully")
         return True
@@ -151,12 +167,63 @@ def get_step_data_for_last_month():
 
         # Save to database
         save_step_data_to_db(step_data)
+        save_statistics_to_db(
+            [day.get('calendarDate', '') for day in step_data],
+            [int(day.get('totalSteps', 0) or 0) for day in step_data],
+            start_date_str,
+            end_date_str)
 
         return step_data
 
     except Exception as exc:
         logging.error("Error fetching step data: %s", exc)
         return None
+
+def save_statistics_to_db(dates, steps, start_date, end_date):
+    """Save calculated statistics to the database"""
+    db = DatabaseManager()
+
+    if not db.connect():
+        return False
+
+    try:
+        # Calculate statistics
+        avg_steps = sum(steps) / len(steps)
+        max_steps = max(steps)
+        min_steps = min(steps)
+
+        # Calculate variance
+        variance = sum((x - avg_steps) ** 2 for x in steps) / len(steps)
+        standard_deviation = variance ** 0.5
+
+        # Insert statistics
+        db.cursor.execute("""
+            INSERT INTO step_statistics
+            (analysis_date, start_date, end_date, days_analyzed, average_steps,
+             max_steps, min_steps, standard_deviation)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+        """, (
+            datetime.now().date(),
+            start_date,
+            end_date,
+            len(steps),
+            round(avg_steps, 2),
+            max_steps,
+            min_steps,
+            round(standard_deviation, 2)
+        ))
+
+        db.connection.commit()
+        logging.info("Statistics saved to database - Avg: %.2f, Max: %d, Min: %d, StdDev: %.2f",
+                    avg_steps, max_steps, min_steps, standard_deviation)
+        return True
+
+    except Exception as exc:
+        logging.error("Error saving statistics to database: %s", exc)
+        db.connection.rollback()
+        return False
+    finally:
+        db.close()
 
 def create_bar_chart(step_data, output_file='step_count_chart.pdf'):
     """Create a bar chart of step counts and export to PDF"""
