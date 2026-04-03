@@ -1,8 +1,8 @@
 """
-Script to visualize daily step count data from Garmin Connect as an area chart.
+Script to visualize daily step count data from Garmin Connect as an bar chart.
 
 This script fetches the last 30 days of step count data from Garmin Connect
-and creates a beautiful area chart visualization with a dark green line and
+and creates a bar chart visualization with a dark green line and
 light green fill. The chart is exported as a high-quality PDF file.
 """
 import logging
@@ -60,8 +60,8 @@ def get_step_data_for_last_month():
         logging.error("Error fetching step data: %s", exc)
         return None
 
-def create_area_chart(step_data, output_file='step_count_chart.pdf'):
-    """Create an area chart of step counts and export to PDF"""
+def create_bar_chart(step_data, output_file='step_count_chart.pdf'):
+    """Create a bar chart of step counts and export to PDF"""
     if not step_data:
         logging.error("No step data to visualize")
         return False
@@ -76,22 +76,40 @@ def create_area_chart(step_data, output_file='step_count_chart.pdf'):
             date_str = day.get('calendarDate', '')
             if date_str:
                 date_obj = datetime.strptime(date_str, '%Y-%m-%d')
-                dates.append(date_obj)
 
-                # Get total steps for the day
+                # Get total steps for the day and ensure it's a valid number
                 total_steps = day.get('totalSteps', 0)
-                steps.append(total_steps)
+
+                # Convert to int and handle None or invalid values
+                if total_steps is not None:
+                    try:
+                        steps_int = int(total_steps)
+                        dates.append(date_obj)
+                        steps.append(steps_int)
+                    except (ValueError, TypeError):
+                        logging.warning("Invalid step count for %s: %s", date_str, total_steps)
+                        continue
+                else:
+                    logging.warning("No step count data for %s", date_str)
+                    continue
 
         if not dates or not steps:
             logging.error("No valid date/step data found")
             return False
 
-        # Create the plot
-        _, ax = plt.subplots(figsize=(12, 6))
+        logging.info("Processing %d days with valid step data", len(dates))
 
-        # Create the area chart with dark green line and light green fill
-        ax.plot(dates, steps, color='darkgreen', linewidth=2, label='Daily Steps')
-        ax.fill_between(dates, steps, color='lightgreen', alpha=0.5)
+        # Create the plot
+        _, ax = plt.subplots(figsize=(14, 8))
+
+        # Create the bar chart with individual bars for each day
+        bars = ax.bar(dates, steps, color='darkblue', alpha=0.8, width=0.8)
+
+        # Add value labels on top of each bar
+        for bar, step_count in zip(bars, steps):
+            height = bar.get_height()
+            ax.text(bar.get_x() + bar.get_width()/2., height + max(steps)*0.01,
+                   f'{step_count:,}', ha='center', va='bottom', fontsize=8, rotation=45)
 
         # Format the chart
         ax.set_xlabel('Date', fontsize=12, fontweight='bold')
@@ -100,17 +118,17 @@ def create_area_chart(step_data, output_file='step_count_chart.pdf'):
 
         # Format x-axis to show dates nicely
         ax.xaxis.set_major_formatter(mdates.DateFormatter('%b %d'))
-        ax.xaxis.set_major_locator(mdates.DayLocator(interval=3))
+        ax.xaxis.set_major_locator(mdates.DayLocator(interval=2))
         plt.xticks(rotation=45, ha='right')
 
-        # Add grid for better readability
-        ax.grid(True, alpha=0.3, linestyle='--')
+        # Add grid for better readability (horizontal only)
+        ax.grid(True, alpha=0.3, linestyle='--', axis='y')
 
         # Format y-axis with comma separator for thousands
         ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'{int(x):,}'))
 
-        # Add legend
-        ax.legend(loc='upper right')
+        # Set y-axis to start from 0 and add some padding at the top
+        ax.set_ylim(0, max(steps) * 1.15)
 
         # Tight layout to prevent label cutoff
         plt.tight_layout()
@@ -129,7 +147,7 @@ def create_area_chart(step_data, output_file='step_count_chart.pdf'):
         return True
 
     except Exception as exc:
-        logging.error("Error creating area chart: %s", exc)
+        logging.error("Error creating bar chart: %s", exc)
         return False
 
 def main():
@@ -144,7 +162,7 @@ def main():
         return
 
     # Create and save the chart
-    success = create_area_chart(step_data)
+    success = create_bar_chart(step_data)
 
     if success:
         logging.info("Visualization completed successfully")
