@@ -1,0 +1,121 @@
+import sys
+import os
+import logging
+from datetime import datetime, timedelta
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+
+from flask import Blueprint, jsonify, request
+from DatabaseManager import DatabaseManager
+from GarminConnectSync import GarminConnectSync
+from config import GARMIN_EMAIL, GARMIN_PASSWORD
+
+steps_bp = Blueprint("steps", __name__)
+
+def get_garmin_client():
+    client = GarminConnectSync(GARMIN_EMAIL, GARMIN_PASSWORD)
+    if not client.login():
+        return None, "Failed to login to Garmin Connect"
+    return client, None
+
+
+@steps_bp.route("/", methods=["GET"])
+def get_steps():
+    """Return step data from the database"""
+    days_back = request.args.get("days_back", 30, type=int)
+
+    db = DatabaseManager()
+    if not db.connect():
+        return jsonify({"error": "Database connection failed"}), 500
+
+    try:
+        cutoff = (datetime.now() - timedelta(days=days_back)).date()
+        db.cursor.execute("""
+            SELECT date, step_count
+            FROM daily_steps
+            WHERE date >= %s
+            ORDER BY date ASC
+        """, (cutoff,))
+        rows = db.cursor.fetchall()
+
+        steps = [{"date": str(row["date"]), "step_count": row["step_count"]} for row in rows]
+        return jsonify(steps)
+    except Exception as e:
+        logging.error("Error fetching steps: %s", e)
+        return jsonify({"error": str(e)}), 500
+    finally:
+        db.close()
+
+
+@steps_bp.route("/statistics", methods=["GET"])
+def get_statistics():
+    """Return the most recent step statistics from the database"""
+    db = DatabaseManager()
+    if not db.connect():
+        return jsonify({"error": "Database connection failed"}), 500
+
+    try:
+        db.cursor.execute("""
+            SELECT analysis_date, start_date, end_date, days_analyzed,
+                   average_steps, max_steps, min_steps, standard_deviation
+            FROM step_statistics
+            ORDER BY analysis_date DESC
+            LIMIT 1
+        """)
+        row = db.cursor.fetchone()
+        if not row:
+            return jsonify({"error": "No statistics found"}), 404
+
+        stat = dict(row)
+        for key in ("analysis_date", "start_date", "end_date"):
+            if stat.get(key):
+                stat[key] = str(stat[key])
+        for key in ("average_steps", "standard_deviation"):
+            if stat.get(key) is not None:
+                stat[key] = float(stat[key])
+
+        return jsonify(stat)
+    except Exception as e:
+        logging.error("Error fetching statistics: %s", e)
+        return jsonify({"error": str(e)}), 500
+    finally:
+        db.close()
+
+
+@steps_bp.route("/sync", methods=["POST"])
+def sync_steps():
+    """Sync step data from Garmin Connect"""
+    days_back = request.json.get("days_back", 30) if request.is_json else 30
+
+    client, error = get_garmin_client()
+    if error:
+        return jsonify({"error": error}), 500
+
+    try:
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=days_back)
+        start_str = start_date.strftime("%Y-%m-%d")
+        end_str = end_date.strftime("%Y-%m-%d")
+
+        step_data = client.client.get_daily_steps(start_str, end_str)
+
+        # Reuse existing save logic
+        sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+        from visualize_steps import save_step_data_to_db, save_statistics_to_db
+        save_step_data_to_db(step_data)
+        save_statistics_to_db(
+            [day.get("calendarDate", "") for day in step_data],
+            [int(day.get("totalSteps", 0) or 0) for day in step_data],
+            start_str,
+            end_str
+        )
+
+        return jsonify({
+            "message": f"Synced {len(step_data)} days of step data.",
+            "count": len(step_data)
+        })
+    except Exception as e:
+        logging.error("Error syncing steps: %s", e)
+        return jsonify({"error": str(e)}), 500
+    finally:
+        client.db.close()
