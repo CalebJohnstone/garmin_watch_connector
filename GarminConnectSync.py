@@ -2,10 +2,31 @@ from garminconnect import Garmin
 import logging
 from datetime import datetime, timedelta
 import os
+import threading
 from DatabaseManager import DatabaseManager
 import argparse
+import time
 
 class GarminConnectSync:
+    _instance = None
+    _instance_lock = threading.Lock()
+
+    @classmethod
+    def get_instance(cls, email, password):
+        """Return a cached, logged-in instance, creating or re-logging-in as needed."""
+        with cls._instance_lock:
+            if cls._instance is not None and cls._instance.logged_in:
+                return cls._instance, None
+            try:
+                instance = cls(email, password)
+                if not instance.login():
+                    return None, ("Failed to login to Garmin Connect. You may be rate limited — wait a few minutes and try again.", 429)
+                cls._instance = instance
+                return cls._instance, None
+            except Exception as e:
+                logging.error("Error creating Garmin client: %s", e)
+                return None, (str(e), 500)
+
     def __init__(self, email, password):
         self.email = email
         self.password = password
@@ -18,15 +39,24 @@ class GarminConnectSync:
             raise ConnectionError("Failed to connect to database")
 
     def login(self):
-        """Login to Garmin Connect"""
+        """Login to Garmin Connect with exponential backoff for rate limiting"""
         try:
             self.client = Garmin(self.email, self.password)
-            self.client.login()
+            self.client.login(tokenstore="garmin_tokenstore.json")
             self.logged_in = True
             logging.info("Successfully logged into Garmin Connect")
             return True
         except Exception as e:
-            logging.error(f"Login failed: {e}")
+            error_str = str(e).lower()
+            is_rate_limit = any(kw in error_str for kw in [
+                "rate limit", "too many requests", "429", "blocked", "try again"
+            ])
+
+            if is_rate_limit:
+                logging.warning("Login failed (use the login token from the token store, please wait an hour to try with that method): %s", e)
+            else:
+                logging.error("Login failed: %s", e)
+
             self.logged_in = False
             return False
 
