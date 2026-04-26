@@ -41,7 +41,7 @@ def init_database():
         db.cursor.execute("""
             CREATE TABLE IF NOT EXISTS step_statistics (
                 id SERIAL PRIMARY KEY,
-                analysis_date DATE NOT NULL,
+                analysis_date_time TIMESTAMP NOT NULL,
                 start_date DATE NOT NULL,
                 end_date DATE NOT NULL,
                 days_analyzed INTEGER NOT NULL,
@@ -197,11 +197,11 @@ def save_statistics_to_db(dates, steps, start_date, end_date):
         # Insert statistics
         db.cursor.execute("""
             INSERT INTO step_statistics
-            (analysis_date, start_date, end_date, days_analyzed, average_steps,
+            (analysis_date_time, start_date, end_date, days_analyzed, average_steps,
              max_steps, min_steps, standard_deviation)
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
         """, (
-            datetime.now().date(),
+            datetime.now(),
             start_date,
             end_date,
             len(steps),

@@ -50,10 +50,10 @@ def get_statistics():
 
     try:
         db.cursor.execute("""
-            SELECT analysis_date, start_date, end_date, days_analyzed,
+            SELECT analysis_date_time, start_date, end_date, days_analyzed,
                    average_steps, max_steps, min_steps, standard_deviation
             FROM step_statistics
-            ORDER BY analysis_date DESC
+            ORDER BY analysis_date_time DESC
             LIMIT 1
         """)
         row = db.cursor.fetchone()
@@ -61,9 +61,15 @@ def get_statistics():
             return jsonify({"error": "No statistics found"}), 404
 
         stat = dict(row)
-        for key in ("analysis_date", "start_date", "end_date"):
+        # strings
+        for key in ("start_date", "end_date"):
             if stat.get(key):
                 stat[key] = str(stat[key])
+        # datetimes
+        for key in ("analysis_date_time",):
+            if stat.get(key) is not None:
+                stat[key] = stat[key].isoformat()
+
         for key in ("average_steps", "standard_deviation"):
             if stat.get(key) is not None:
                 stat[key] = float(stat[key])
