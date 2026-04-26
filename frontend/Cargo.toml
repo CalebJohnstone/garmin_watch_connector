@@ -31,6 +31,7 @@ js-sys = "0.3"
 wasm-bindgen-futures = "0.4"
 serde = { version = "1", features = ["derive"] }
 serde-wasm-bindgen = "0.6"
+time = { version = "0.3", default-features = false, features = ["std", "parsing", "formatting", "macros"] }
 
 [profile.release]
 opt-level = "s"

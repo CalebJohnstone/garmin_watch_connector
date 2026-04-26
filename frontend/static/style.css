@@ -9,7 +9,6 @@
     --accent: #4f8ef7;
     --accent2: #f7874f;
     --text: #e8eaf0;
-    --text-muted: #8b90a8;
     --success: #4fca8e;
     --error: #f75f5f;
     --radius: 12px;
@@ -135,7 +134,7 @@ main {
     font-size: 0.7rem;
     text-transform: uppercase;
     letter-spacing: 0.08em;
-    color: var(--text-muted);
+    color: var(--text);
 }
 
 .stat-box .value {
@@ -178,20 +177,19 @@ main {
 .bar:hover { opacity: 0.75; cursor: default; }
 
 .bar-value {
-    font-size: 0.55rem;
-    color: var(--text-muted);
+    font-size: 0.75rem;
+    color: var(--text);
     text-align: center;
     margin-bottom: 2px;
     white-space: nowrap;
 }
 
 .bar-label {
-    font-size: 0.6rem;
-    color: var(--text-muted);
+    font-size: 0.7rem;
+    color: var(--text);
     text-align: center;
     margin-top: 4px;
     white-space: nowrap;
-    transform: rotate(-45deg);
     transform-origin: top center;
 }
 
@@ -224,7 +222,7 @@ main {
     border-bottom: 1px solid var(--border);
 }
 
-.card-header .date { font-size: 0.8rem; color: var(--text-muted); }
+.card-header .date { font-size: 0.8rem; color: var(--text); }
 .card-header .distance { font-size: 1.1rem; font-weight: 700; color: var(--accent); }
 
 .card-body {
@@ -235,12 +233,12 @@ main {
 }
 
 .stat { display: flex; flex-direction: column; gap: 0.1rem; }
-.stat .label { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-muted); }
+.stat .label { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text); }
 .stat .value { font-size: 0.95rem; font-weight: 600; }
 
 /* ── States ───────────────────────────────────────────────────────────────── */
 .empty {
-    color: var(--text-muted);
+    color: var(--text);
     font-size: 0.9rem;
     padding: 2rem 0;
     text-align: center;
@@ -259,7 +257,7 @@ main {
     justify-content: center;
     gap: 0.75rem;
     padding: 2rem 0;
-    color: var(--text-muted);
+    color: var(--text);
     font-size: 0.9rem;
 }
 
