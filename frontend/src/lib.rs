@@ -3,6 +3,7 @@ use wasm_bindgen_futures::JsFuture;
 use web_sys::{Request, RequestInit, RequestMode, Response};
 use js_sys::JSON;
 use serde::{Deserialize, Serialize};
+use time::{Date, macros::format_description};
 
 // ── Data Models ──────────────────────────────────────────────────────────────
 
@@ -130,16 +131,15 @@ fn render_activities(activities: &[Activity]) {
 }
 
 fn render_steps(steps: &[StepEntry], stats: Option<&StepStatistics>) {
-    // Statistics banner
     if let Some(s) = stats {
         set_inner_html("steps-stats", &format!(
             r#"<div class="stats-row">
-                <div class="stat-box"><span class="label">Avg Steps</span><span class="value">{:.0}</span></div>
+                <div class="stat-box"><span class="label">Average Steps</span><span class="value">{:.0}</span></div>
                 <div class="stat-box"><span class="label">Min</span><span class="value">{}</span></div>
                 <div class="stat-box"><span class="label">Max</span><span class="value">{}</span></div>
                 <div class="stat-box"><span class="label">Standard Deviation</span><span class="value">{:.0}</span></div>
             </div>"#,
-            s.average_steps, s.max_steps, s.min_steps, s.standard_deviation
+            s.average_steps, s.min_steps, s.max_steps, s.standard_deviation
         ));
     }
 
@@ -153,7 +153,7 @@ fn render_steps(steps: &[StepEntry], stats: Option<&StepStatistics>) {
     let mut bars = String::new();
     for entry in steps {
         let height_pct = (entry.step_count as f64 / max_steps as f64 * 100.0).round() as i64;
-        let label = entry.date.get(5..).unwrap_or(&entry.date); // MM-DD
+        let label = format_month_day(&entry.date);
         let formatted_count = format_number_with_commas(entry.step_count);
         bars.push_str(&format!(
             r#"<div class="bar-wrap">
@@ -190,6 +190,14 @@ fn format_number_with_commas(n: i64) -> String {
         result.push(c);
     }
     result.chars().rev().collect()
+}
+
+fn format_month_day(date: &str) -> String {
+    let fmt_in = format_description!("[year]-[month]-[day]");
+    let fmt_out = format_description!("[month repr:short] [day padding:none]");
+    Date::parse(date, &fmt_in)
+        .map(|d| d.format(&fmt_out).unwrap_or_else(|_| date.to_string()))
+        .unwrap_or_else(|_| date.to_string())
 }
 
 // ── Entry Point ───────────────────────────────────────────────────────────────
