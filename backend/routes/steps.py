@@ -12,12 +12,6 @@ from config import GARMIN_EMAIL, GARMIN_PASSWORD
 
 steps_bp = Blueprint("steps", __name__)
 
-def get_garmin_client():
-    client = GarminConnectSync(GARMIN_EMAIL, GARMIN_PASSWORD)
-    if not client.login():
-        return None, "Failed to login to Garmin Connect"
-    return client, None
-
 
 @steps_bp.route("/", methods=["GET"])
 def get_steps():
@@ -87,9 +81,10 @@ def sync_steps():
     """Sync step data from Garmin Connect"""
     days_back = request.json.get("days_back", 30) if request.is_json else 30
 
-    client, error = get_garmin_client()
+    client, error = GarminConnectSync.get_instance(GARMIN_EMAIL, GARMIN_PASSWORD)
     if error:
-        return jsonify({"error": error}), 500
+        msg, status = error
+        return jsonify({"error": msg}), status
 
     try:
         end_date = datetime.now()
