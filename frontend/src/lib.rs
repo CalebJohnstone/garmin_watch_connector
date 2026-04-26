@@ -29,7 +29,7 @@ pub struct StepEntry {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct StepStatistics {
-    pub analysis_date: String,
+    pub analysis_date_time: String,
     pub start_date: String,
     pub end_date: String,
     pub days_analyzed: i64,
@@ -265,6 +265,17 @@ async fn load_steps() -> Result<(), JsValue> {
     let stats = fetch_json("/api/steps/statistics").await.ok().and_then(|json| {
         serde_wasm_bindgen::from_value::<StepStatistics>(json).ok()
     });
+
+    if let Some(s) = &stats {
+        let raw = &s.analysis_date_time;
+        let date_part = raw.get(..10).unwrap_or(raw.as_str());
+        let time_part = raw.get(11..16).unwrap_or("");
+        let tooltip = format!("Last synced: {} {}", format_month_day(date_part), time_part);
+
+        if let Some(btn) = document().get_element_by_id("sync-steps-btn") {
+            btn.set_attribute("title", &tooltip).ok();
+        }
+    }
 
     match fetch_json("/api/steps/").await {
         Ok(json) => {
