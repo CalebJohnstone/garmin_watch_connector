@@ -42,7 +42,7 @@ class GarminConnectSync:
         """Login to Garmin Connect with exponential backoff for rate limiting"""
         try:
             self.client = Garmin(self.email, self.password)
-            self.client.login(tokenstore="garmin_tokenstore.json")
+            self.client.login(tokenstore="garmin_tokenstore")
             self.logged_in = True
             logging.info("Successfully logged into Garmin Connect")
             return True
