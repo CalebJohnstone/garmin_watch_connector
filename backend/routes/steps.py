@@ -19,18 +19,9 @@ def get_steps():
     days_back = request.args.get("days_back", 30, type=int)
 
     db = DatabaseManager()
-    if not db.connect():
-        return jsonify({"error": "Database connection failed"}), 500
-
     try:
         cutoff = (datetime.now() - timedelta(days=days_back)).date()
-        db.cursor.execute("""
-            SELECT date, step_count
-            FROM daily_steps
-            WHERE date >= %s
-            ORDER BY date ASC
-        """, (cutoff,))
-        rows = db.cursor.fetchall()
+        rows = db.get_daily_steps_since(cutoff)
 
         steps = [{"date": str(row["date"]), "step_count": row["step_count"]} for row in rows]
         return jsonify(steps)
@@ -45,18 +36,8 @@ def get_steps():
 def get_statistics():
     """Return the most recent step statistics from the database"""
     db = DatabaseManager()
-    if not db.connect():
-        return jsonify({"error": "Database connection failed"}), 500
-
     try:
-        db.cursor.execute("""
-            SELECT analysis_date_time, start_date, end_date, days_analyzed,
-                   average_steps, max_steps, min_steps, standard_deviation
-            FROM step_statistics
-            ORDER BY analysis_date_time DESC
-            LIMIT 1
-        """)
-        row = db.cursor.fetchone()
+        row = db.get_most_recent_step_statistics()
         if not row:
             return jsonify({"error": "No statistics found"}), 404
 

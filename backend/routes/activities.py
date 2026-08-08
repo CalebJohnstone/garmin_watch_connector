@@ -13,21 +13,11 @@ activities_bp = Blueprint("activities", __name__)
 
 
 @activities_bp.route("/", methods=["GET"])
-def get_activities():
-    """Return all runs stored in the database"""
+def get_running_activities(days_back=30):
+    """Return most recent runs since the number of days back"""
     db = DatabaseManager()
-    if not db.connect():
-        return jsonify({"error": "Database connection failed"}), 500
-
     try:
-        db.cursor.execute("""
-            SELECT id, activity_id, start_time, end_time, distance_meters,
-                   duration_seconds, avg_pace_seconds_per_km, calories,
-                   avg_heart_rate, max_heart_rate, sync_timestamp
-            FROM runs
-            ORDER BY start_time DESC
-        """)
-        rows = db.cursor.fetchall()
+        rows = db.get_runs(days_back)
 
         activities = []
         for row in rows:
