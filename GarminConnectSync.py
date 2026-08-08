@@ -33,10 +33,7 @@ class GarminConnectSync:
         self.client = None
         self.logged_in = False
         self.db = DatabaseManager()
-        if self.db.connect():
-            self.db.create_tables()
-        else:
-            raise ConnectionError("Failed to connect to database")
+        self.db.create_tables()
 
     def login(self):
         """Login to Garmin Connect with exponential backoff for rate limiting"""
