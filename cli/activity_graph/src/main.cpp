@@ -61,7 +61,9 @@ int main(int argc, char** argv) {
     int width = 0;
     app.add_option("--width", width, "Chart width in terminal columns (default: terminal width)");
     int height = 0;
-    app.add_option("--height", height, "Chart height in terminal rows (default: terminal height, minus margin)");
+    app.add_option("--height", height,
+                    "Line chart height in terminal rows (default: terminal height, minus margin). "
+                    "Bar charts always show every group instead, regardless of terminal height.");
 
     CLI11_PARSE(app, argc, argv);
 
@@ -98,17 +100,23 @@ int main(int argc, char** argv) {
         const auto since_opt = to_optional(since);
 
         ftxui::Element root;
+        int screen_height;
         if (chart_type == "line") {
             const auto points = db.fetch_timeseries(*metric, activity_type_opt, since_opt, limit);
             root = make_line_chart(points, *metric, width, height);
+            screen_height = height + 4;
         } else {
             const GroupBy group = (group_by == "month") ? GroupBy::kMonth : GroupBy::kType;
             const Agg aggregation = (agg == "sum") ? Agg::kSum : (agg == "avg" ? Agg::kAvg : Agg::kCount);
             const auto groups = db.fetch_aggregate(*metric, group, aggregation, since_opt);
-            root = make_bar_chart(groups, *metric, width, height);
+            root = make_bar_chart(groups, *metric, width);
+            // Always tall enough for every group (title + separator + one row
+            // per group) - never clip a bar chart to the terminal's height.
+            screen_height = static_cast<int>(groups.size()) + 3;
         }
 
-        auto screen = ftxui::Screen::Create(ftxui::Dimension::Fixed(width), ftxui::Dimension::Fixed(height + 4));
+        auto screen =
+            ftxui::Screen::Create(ftxui::Dimension::Fixed(width), ftxui::Dimension::Fixed(screen_height));
         ftxui::Render(screen, root);
         std::cout << screen.ToString() << "\n";
     } catch (const std::exception& e) {

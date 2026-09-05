@@ -79,7 +79,7 @@ Element make_line_chart(const std::vector<TimeSeriesPoint>& points, const Metric
     });
 }
 
-Element make_bar_chart(const std::vector<BarGroup>& groups, const MetricDef& metric, int cols, int rows) {
+Element make_bar_chart(const std::vector<BarGroup>& groups, const MetricDef& metric, int cols) {
     const std::string title = std::string(metric.label) + " - by group";
 
     if (groups.empty()) {
@@ -112,16 +112,14 @@ Element make_bar_chart(const std::vector<BarGroup>& groups, const MetricDef& met
         }));
     }
 
-    Element body = vbox(rows_el);
-    if (rows > 0) {
-        body = body | size(HEIGHT, EQUAL, rows);
-    }
-
+    // No height constraint here - a bar chart always shows every group
+    // (e.g. every month in range), even if that's taller than one screen.
     return vbox({
-        text(title) | bold,
-        separator(),
-        body,
-    }) | size(WIDTH, EQUAL, cols);
+               text(title) | bold,
+               separator(),
+               vbox(rows_el),
+           }) |
+           size(WIDTH, EQUAL, cols);
 }
 
 }  // namespace activity_graph
