@@ -46,10 +46,14 @@ std::vector<BarGroup> Database::fetch_aggregate(const MetricDef& metric, GroupBy
                                                  const std::optional<std::string>& since) {
     const std::string column(metric.column);
 
-    std::string group_expr = (group_by == GroupBy::kType) ? "t.type_key"
-                                                            : "to_char(date_trunc('month', a.start_time_gmt), 'YYYY-MM')";
+    // For month grouping, sort by the actual month (a timestamp) rather than
+    // the display label - "2026 Jan" sorts alphabetically before "2026 Feb",
+    // which would scramble chronological order.
+    const std::string sort_expr = (group_by == GroupBy::kType) ? "t.type_key" : "date_trunc('month', a.start_time_gmt)";
+    const std::string label_expr =
+        (group_by == GroupBy::kType) ? "t.type_key" : "to_char(date_trunc('month', a.start_time_gmt), 'YYYY Mon')";
 
-    std::string sql = "SELECT " + group_expr +
+    std::string sql = "SELECT " + label_expr +
                        " AS grp, COUNT(*) AS cnt, AVG(a." + column + ") AS avg_v, SUM(a." + column +
                        ") AS sum_v FROM activities a JOIN activity_types t ON a.activity_type_id = t.id"
                        " WHERE a." + column + " IS NOT NULL";
@@ -60,7 +64,7 @@ std::vector<BarGroup> Database::fetch_aggregate(const MetricDef& metric, GroupBy
         sql += " AND a.start_time_gmt >= $" + std::to_string(idx++);
         params.append(*since);
     }
-    sql += " GROUP BY " + group_expr + " ORDER BY " + group_expr;
+    sql += " GROUP BY " + sort_expr + " ORDER BY " + sort_expr;
 
     pqxx::nontransaction tx(conn_);
     pqxx::result res = tx.exec(sql, params);
