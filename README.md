@@ -42,7 +42,19 @@ DB_PASSWORD=your_db_password
 DB_PORT=5432
 ```
 
+### Data Export Import
+
+Import a full Garmin Connect data export (the "Export Your Data" download,
+extracted to a folder) into Postgres — activities, daily wellness, sleep,
+training metrics, personal records, and gear. See
+[backend/ingest/README.md](backend/ingest/README.md) for setup and usage.
+
+```bash
+python -m backend.ingest.cli --export-dir /path/to/garmin_export --dry-run
+```
+
 ## Scripts
 
 - `main.py` - Sync running activities to PostgreSQL database
 - `visualize_steps.py` - Generate step count visualization for the last month
+- `backend/ingest/cli.py` - Import a Garmin Connect data export into PostgreSQL (see above)
