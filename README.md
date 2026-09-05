@@ -53,8 +53,23 @@ training metrics, personal records, and gear. See
 python -m backend.ingest.cli --export-dir /path/to/garmin_export --dry-run
 ```
 
+### Terminal Activity Charts (C++)
+
+Render line graphs and bar charts of the `activities` table directly in the
+terminal. See [cli/activity_graph/README.md](cli/activity_graph/README.md)
+for setup and usage.
+
+```bash
+brew install libpqxx ftxui cli11
+cmake -S cli/activity_graph -B cli/activity_graph/build \
+  -DCMAKE_PREFIX_PATH="$(brew --prefix libpqxx);$(brew --prefix ftxui);$(brew --prefix cli11);$(brew --prefix libpq)"
+cmake --build cli/activity_graph/build -j
+./cli/activity_graph/build/activity_graph --type bar --metric distance --group-by type
+```
+
 ## Scripts
 
 - `main.py` - Sync running activities to PostgreSQL database
 - `visualize_steps.py` - Generate step count visualization for the last month
 - `backend/ingest/cli.py` - Import a Garmin Connect data export into PostgreSQL (see above)
+- `cli/activity_graph` - C++ terminal line/bar charts of the `activities` table (see above)
