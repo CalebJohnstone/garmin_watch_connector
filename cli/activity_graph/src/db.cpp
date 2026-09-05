@@ -36,7 +36,7 @@ std::vector<TimeSeriesPoint> Database::fetch_timeseries(const MetricDef& metric,
     std::vector<TimeSeriesPoint> points;
     points.reserve(res.size());
     for (const auto& row : res) {
-        points.push_back({row[0].as<std::string>(), row[1].as<double>()});
+        points.push_back({row[0].as<std::string>(), row[1].as<double>() / metric.divisor});
     }
     std::reverse(points.begin(), points.end());
     return points;
@@ -71,13 +71,14 @@ std::vector<BarGroup> Database::fetch_aggregate(const MetricDef& metric, GroupBy
         double value = 0.0;
         switch (agg) {
             case Agg::kCount:
+                // A row count, not a physical quantity - never scaled by the metric's divisor.
                 value = row["cnt"].as<double>();
                 break;
             case Agg::kSum:
-                value = row["sum_v"].as<double>();
+                value = row["sum_v"].as<double>() / metric.divisor;
                 break;
             case Agg::kAvg:
-                value = row["avg_v"].as<double>();
+                value = row["avg_v"].as<double>() / metric.divisor;
                 break;
         }
         groups.push_back({row["grp"].as<std::string>(), value});

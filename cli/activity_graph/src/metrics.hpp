@@ -9,13 +9,14 @@ namespace activity_graph {
 struct MetricDef {
     std::string_view key;     // CLI-facing name, e.g. "distance"
     std::string_view column;  // real activities column name, e.g. "distance_meters"
-    std::string_view label;   // human-readable label with unit, e.g. "Distance (m)"
+    std::string_view label;   // human-readable label with unit, e.g. "Distance (km)"
+    double divisor = 1.0;     // raw column value is divided by this before display
 };
 
 // Curated, deliberately small set of metrics an end user would actually want
 // to see - not an attempt to expose all ~85 columns on `activities`.
 inline constexpr std::array<MetricDef, 8> kMetrics{{
-    {"distance", "distance_meters", "Distance (m)"},
+    {"distance", "distance_meters", "Distance (km)", 1000.0},
     {"duration", "duration_seconds", "Duration (s)"},
     {"speed", "avg_speed_mps", "Avg Speed (m/s)"},
     {"heart-rate", "avg_hr", "Avg Heart Rate (bpm)"},
