@@ -1,0 +1,12 @@
+{
+    "version": 4,
+    "configurations": [
+        {
+            "name": "Mac",
+            "compileCommands": "${workspaceFolder}/cli/activity_graph/build/compile_commands.json",
+            "macFrameworkPath": [
+                "/System/Library/Frameworks"
+            ]
+        }
+    ]
+}
